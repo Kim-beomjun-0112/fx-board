@@ -1,6 +1,13 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>환율 전광판 - 28개 통화 실시간 환율 계산</title>
 <meta name="description" content="원화·달러·엔 등 28개 통화를 한 번에! 금액만 넣으면 전광판처럼 뒤집히며 환율이 나와요. 환전 수수료 계산기도 있어요.">
 <link rel="canonical" href="https://fx.qjawnsl112.com/">
+<link rel="alternate" hreflang="ko" href="https://fx.qjawnsl112.com/">
+<link rel="alternate" hreflang="en" href="https://fx.qjawnsl112.com/en/">
+<link rel="alternate" hreflang="x-default" href="https://fx.qjawnsl112.com/">
 <meta name="theme-color" content="#1d2430">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
@@ -19,7 +26,6 @@
 <meta name="twitter:title" content="환율 전광판 - 금액만 넣으면 모든 통화가 뒤집혀요">
 <meta name="twitter:description" content="원화·달러·엔 등 28개 통화를 한 번에! 금액만 넣으면 전광판처럼 뒤집히며 환율이 나와요. 환전 수수료 계산기도 있어요.">
 <meta name="twitter:image" content="https://fx.qjawnsl112.com/og.png">
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 위에 금액 입력판(통화 선택 포함), 아래 왼쪽 통화 타일 전광판, 오른쪽 환전 수수료 계산기 */
@@ -45,6 +51,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0;letter-s
 h1 b{color:var(--accent);font-weight:400}
 .asof{font-size:12px;color:var(--muted)}
 .asof span{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;margin-left:6px}
+
+.lang{display:inline-block;margin-left:8px;padding:2px 10px;border:1px solid var(--accent);border-radius:999px;color:var(--accent);text-decoration:none;font-weight:700;font-size:12px}
+.lang:hover{background:var(--accent);color:var(--accent-ink)}
 
 /* 입력판 */
 .input-board{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
@@ -121,7 +130,7 @@ footer{font-size:12px;color:var(--muted)}
 <div class="wrap">
   <header class="top">
     <h1>환율 <b>전광판</b></h1>
-    <div class="asof"><b id="asofDate">환율 불러오는 중…</b> <span id="asofSrc"></span></div>
+    <div class="asof"><b id="asofDate">환율 불러오는 중…</b> <span id="asofSrc"></span><a class="lang" href="/en/" hreflang="en" lang="en">English</a></div>
   </header>
 
   <section class="input-board" aria-label="금액 입력">
