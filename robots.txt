@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fx.qjawnsl112.com/sitemap.xml
