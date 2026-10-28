@@ -1,0 +1,360 @@
+<title>환율 전광판</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 레이아웃: 위에 금액 입력판(통화 선택 포함), 아래 왼쪽 통화 타일 전광판, 오른쪽 환전 수수료 계산기 */
+:root{
+  --bg:#eef0f3; --panel:#ffffff; --tile:#1d2430; --tile-ink:#f4f6f8; --tile-sub:#9aa5b5;
+  --ink:#1a2029; --muted:#5d6878; --line:#d7dce3; --accent:#e8930c; --accent-ink:#2a1a00;
+  --fav:#e8930c; --good:#1f8a5b;
+  --f-display:"Do Hyeon","Noto Sans KR",system-ui,sans-serif;
+  --f-body:"Noto Sans KR",system-ui,-apple-system,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1319; --panel:#171d26; --tile:#1f2731; --tile-ink:#f4f6f8; --tile-sub:#8d99aa;
+  --ink:#e7ebf0; --muted:#97a2b2; --line:#2a3340; --accent:#f2a325; --accent-ink:#231500; --fav:#f2a325; --good:#3fbf86; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1319; --panel:#171d26; --tile:#1f2731; --tile-ink:#f4f6f8; --tile-sub:#8d99aa;
+  --ink:#e7ebf0; --muted:#97a2b2; --line:#2a3340; --accent:#f2a325; --accent-ink:#231500; --fav:#f2a325; --good:#3fbf86; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0;letter-spacing:.5px}
+h1 b{color:var(--accent);font-weight:400}
+.asof{font-size:12px;color:var(--muted)}
+.asof span{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;margin-left:6px}
+
+/* 입력판 */
+.input-board{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.input-board label{font-size:13px;color:var(--muted);letter-spacing:.3px}
+.amount-row{display:flex;align-items:center;gap:10px;border-bottom:3px solid var(--accent);padding-bottom:6px}
+.amount-row input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:var(--f-num);font-weight:600;font-size:clamp(26px,7vw,46px);outline:none;font-variant-numeric:tabular-nums}
+.amount-row input::placeholder{font-family:var(--f-body);font-weight:400;font-size:clamp(15px,4vw,20px);color:var(--muted);opacity:.7}
+.amount-row select{flex:0 1 auto;max-width:48%;font:inherit;font-weight:700;font-size:15px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;text-overflow:ellipsis}
+.hangul{font-size:13px;color:var(--muted);min-height:20px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip.reset{color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible,.face:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 본문 그리드 */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px;gap:8px;flex-wrap:wrap}
+.sec-head h2{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
+.sec-head small{color:var(--muted);font-size:12px}
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px}
+.board.kr{grid-template-columns:minmax(0,1fr);margin-bottom:12px}
+.board.kr:empty{display:none}
+.empty{grid-column:1/-1;font-size:13px;color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:14px;text-align:center}
+
+/* 뒤집히는 타일 */
+.tile{perspective:600px;position:relative}
+.face{background:var(--tile);color:var(--tile-ink);border-radius:12px;padding:12px 12px 10px;display:flex;flex-direction:column;gap:6px;transform-origin:50% 50%;backface-visibility:hidden;position:relative;overflow:hidden;cursor:pointer;transition:box-shadow .15s}
+.face:hover{box-shadow:0 0 0 2px var(--accent)}
+.face::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.45);box-shadow:0 1px 0 rgba(255,255,255,.05);pointer-events:none}
+.tile.flip .face{animation:flap .46s cubic-bezier(.3,.7,.3,1)}
+@keyframes flap{0%{transform:rotateX(0)}45%{transform:rotateX(-90deg);filter:brightness(.6)}55%{transform:rotateX(90deg);filter:brightness(.6)}100%{transform:rotateX(0)}}
+.t-head{display:flex;align-items:center;gap:6px;padding-right:26px}
+.flag{font-size:18px;line-height:1}
+.code{font-family:var(--f-num);font-weight:600;font-size:13px;letter-spacing:1px;color:var(--accent)}
+.name{font-size:12px;color:var(--tile-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.val{font-family:var(--f-num);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:30px}
+.rate{font-size:11px;color:var(--tile-sub);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.star{position:absolute;top:6px;right:6px;z-index:2;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--tile-sub);font-size:17px;cursor:pointer;display:grid;place-items:center}
+.star[aria-pressed="true"]{color:var(--fav)}
+.star:hover{background:rgba(255,255,255,.08)}
+/* 원화 결과 타일 (입력 통화가 원화가 아닐 때 맨 앞에 고정) */
+.tile.hero .face{border:2px solid var(--accent);padding:16px 16px 14px}
+.tile.hero .val{font-size:clamp(28px,7vw,42px);min-height:48px}
+.tile.hero .code{font-size:15px}
+.tile.hero .name{font-size:13px}
+.tile.hero .t-head{padding-right:0}
+
+/* 계산기 */
+aside.calc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}
+@media (max-width:860px){aside.calc{position:static}}
+aside.calc h2{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
+aside.calc p.desc{margin:0;font-size:12px;color:var(--muted)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;border:0;padding:8px;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:var(--muted)}
+.field input,.field select{font:inherit;font-family:var(--f-num);font-size:15px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%}
+.field select{font-family:var(--f-body)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.result{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.result .line{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.result .line span:last-child{font-family:var(--f-num)}
+.result .total{font-size:15px;font-weight:700}
+.result .total span:last-child{color:var(--accent);font-size:18px}
+.result .save span:last-child{color:var(--good)}
+.note{font-size:11px;color:var(--muted);margin:0}
+footer{font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.tile.flip .face{animation:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>환율 <b>전광판</b></h1>
+    <div class="asof">기준 2026-10-23 <span>미리보기용 예시 환율</span></div>
+  </header>
+
+  <section class="input-board" aria-label="금액 입력">
+    <label for="amt">금액을 넣어 보세요. 통화는 오른쪽에서 고르거나 "100달러", "$50", "5000엔"처럼 바로 써도 돼요.</label>
+    <div class="amount-row">
+      <input id="amt" inputmode="decimal" autocomplete="off" value="1,000,000" placeholder="예: 100달러, $50, 5000엔, 100 USD" aria-describedby="hangul">
+      <select id="baseCur" aria-label="입력할 통화"></select>
+    </div>
+    <div class="hangul" id="hangul"></div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <div class="main">
+    <div>
+      <div class="board kr" id="krBoard"></div>
+      <div class="sec-head"><h2>즐겨찾기</h2><small>☆를 누르면 여기로 올라와요</small></div>
+      <div class="board" id="favBoard"></div>
+      <div class="sec-head" style="margin-top:20px"><h2>전체 통화</h2><small id="count"></small></div>
+      <div class="board" id="allBoard"></div>
+    </div>
+
+    <aside class="calc" aria-label="환전 수수료 계산기">
+      <h2>환전 수수료 계산기</h2>
+      <p class="desc">은행 환전 우대율을 넣으면 실제로 내는 원화와 아끼는 돈을 계산해요.</p>
+      <div class="seg" role="group" aria-label="거래 방향">
+        <button id="modeBuy" aria-pressed="true">외화 살 때</button>
+        <button id="modeSell" aria-pressed="false">외화 팔 때</button>
+      </div>
+      <div class="field"><label for="cCur">통화</label><select id="cCur"></select></div>
+      <div class="field"><label for="cAmt" id="cAmtLabel">필요한 외화 금액</label><input id="cAmt" inputmode="decimal" value="1000"></div>
+      <div class="row2">
+        <div class="field"><label for="cSpread">환전 수수료율(%)</label><input id="cSpread" inputmode="decimal" value="1.75"></div>
+        <div class="field"><label for="cPref">우대율(%)</label><input id="cPref" inputmode="decimal" value="90"></div>
+      </div>
+      <div class="result" aria-live="polite">
+        <div class="line"><span>매매기준율</span><span id="rBase"></span></div>
+        <div class="line"><span>적용 환율</span><span id="rApplied"></span></div>
+        <div class="line"><span>우대 없을 때</span><span id="rNoPref"></span></div>
+        <div class="line save"><span>우대로 아끼는 돈</span><span id="rSave"></span></div>
+        <div class="line total"><span id="rTotalLabel">내야 할 원화</span><span id="rTotal"></span></div>
+      </div>
+      <p class="note">현찰 기준 수수료율은 보통 1.5~2%, 송금은 1% 안팎이에요. 은행마다 달라요.</p>
+    </aside>
+  </div>
+
+  <footer>표시된 환율은 화면 미리보기용 예시 값이에요. 실제 사이트에서는 매일 공개 환율 API로 자동 갱신합니다.</footer>
+</div>
+
+<script>
+// unit: 고시 단위(JPY·VND·IDR는 100단위). rate: 단위당 원화(예시)
+const CUR=[
+ ["USD","미국 달러","🇺🇸",1,1390.5,"$"],["JPY","일본 엔","🇯🇵",100,918.2,"¥"],["EUR","유로","🇪🇺",1,1604.3,"€"],
+ ["CNY","중국 위안","🇨🇳",1,192.6,"¥"],["GBP","영국 파운드","🇬🇧",1,1851.4,"£"],["HKD","홍콩 달러","🇭🇰",1,178.9,"HK$"],
+ ["TWD","대만 달러","🇹🇼",1,45.1,"NT$"],["VND","베트남 동","🇻🇳",100,5.38,"₫"],["THB","태국 바트","🇹🇭",1,41.6,"฿"],
+ ["PHP","필리핀 페소","🇵🇭",1,24.2,"₱"],["SGD","싱가포르 달러","🇸🇬",1,1072.8,"S$"],["MYR","말레이시아 링깃","🇲🇾",1,325.4,"RM"],
+ ["IDR","인도네시아 루피아","🇮🇩",100,8.52,"Rp"],["AUD","호주 달러","🇦🇺",1,902.7,"A$"],["NZD","뉴질랜드 달러","🇳🇿",1,822.1,"NZ$"],
+ ["CAD","캐나다 달러","🇨🇦",1,1003.9,"C$"],["CHF","스위스 프랑","🇨🇭",1,1721.5,"Fr"],["SEK","스웨덴 크로나","🇸🇪",1,145.3,"kr"],
+ ["NOK","노르웨이 크로네","🇳🇴",1,131.2,"kr"],["DKK","덴마크 크로네","🇩🇰",1,215.0,"kr"],["AED","아랍에미리트 디르함","🇦🇪",1,378.6,"د.إ"],
+ ["SAR","사우디 리얄","🇸🇦",1,370.7,"﷼"],["INR","인도 루피","🇮🇳",1,16.3,"₹"],["MXN","멕시코 페소","🇲🇽",1,75.4,"$"],
+ ["BRL","브라질 헤알","🇧🇷",1,251.8,"R$"],["TRY","튀르키예 리라","🇹🇷",1,34.1,"₺"],["MNT","몽골 투그릭","🇲🇳",1,0.41,"₮"],["KZT","카자흐스탄 텡게","🇰🇿",1,2.78,"₸"]
+].map(([code,name,flag,unit,rate,sym])=>({code,name,flag,unit,rate,sym,per1:rate/unit}));
+const KRW={code:"KRW",name:"대한민국 원",flag:"🇰🇷",unit:1,rate:1,sym:"₩",per1:1};
+const ALL=[KRW,...CUR];
+const ZERO=["JPY","VND","IDR","KRW"]; // 소수점 없이 보여주는 통화
+
+// 한글·기호로 통화를 알아듣기 위한 사전 (긴 말부터 검사)
+const ALIAS=Object.entries({
+ "미국달러":"USD","달러":"USD","홍콩달러":"HKD","대만달러":"TWD","호주달러":"AUD","캐나다달러":"CAD","뉴질랜드달러":"NZD","싱가포르달러":"SGD",
+ "엔화":"JPY","엔":"JPY","유로":"EUR","위안화":"CNY","위안":"CNY","파운드":"GBP","바트":"THB","베트남동":"VND","동":"VND",
+ "페소":"PHP","링깃":"MYR","루피아":"IDR","루피":"INR","프랑":"CHF","크로나":"SEK","크로네":"NOK","디르함":"AED","리얄":"SAR",
+ "헤알":"BRL","리라":"TRY","투그릭":"MNT","텡게":"KZT","원화":"KRW","원":"KRW"
+}).sort((a,b)=>b[0].length-a[0].length);
+const SYM=[["HK$","HKD"],["NT$","TWD"],["A$","AUD"],["C$","CAD"],["S$","SGD"],["$","USD"],["¥","JPY"],["€","EUR"],["£","GBP"],["₩","KRW"],["₹","INR"],["฿","THB"]];
+function detect(raw){
+  const s=raw.replace(/[\s,\d.]/g,"");
+  if(!s)return null;
+  const up=s.toUpperCase();
+  for(const c of ALL)if(up.includes(c.code))return c.code;
+  for(const[k,v]of ALIAS)if(s.includes(k))return v;
+  for(const[k,v]of SYM)if(s.includes(k))return v;
+  return null;
+}
+
+const $=s=>document.querySelector(s);
+const amtEl=$("#amt"), baseSel=$("#baseCur"), chipsEl=$("#chips");
+let base=KRW;
+let favs=[];
+try{favs=JSON.parse(localStorage.getItem("fx-favs")||"null")||["USD","JPY","EUR"]}catch(e){favs=["USD","JPY","EUR"]}
+const saveFavs=()=>{try{localStorage.setItem("fx-favs",JSON.stringify(favs))}catch(e){}};
+
+function parseNum(s){
+  let t=String(s).replace(/[^\d.]/g,"");
+  const i=t.indexOf(".");
+  if(i>=0)t=t.slice(0,i+1)+t.slice(i+1).replace(/\./g,"");
+  return Number(t)||0;
+}
+const getAmount=()=>{const n=parseNum(amtEl.value);return base.code==="KRW"?Math.floor(n):n};
+function fmtAmtStr(raw){
+  const s=String(raw).replace(/[^\d.]/g,"");
+  const i=s.indexOf(".");
+  const ip=(i<0?s:s.slice(0,i)).slice(0,12).replace(/^0+(?=\d)/,"");
+  const dp=(i<0||base.code==="KRW")?null:s.slice(i+1).replace(/\./g,"").slice(0,2);
+  if(!ip&&dp===null)return"";
+  return(ip||"0").replace(/\B(?=(\d{3})+(?!\d))/g,",")+(dp!==null?"."+dp:"");
+}
+function fmtVal(v,code){
+  if(v===0)return"0";
+  if(ZERO.includes(code))return v>=1?Math.round(v).toLocaleString("ko-KR"):v.toLocaleString("ko-KR",{maximumFractionDigits:2});
+  const d=v>=1000?0:v>=1?2:4;
+  return v.toLocaleString("ko-KR",{maximumFractionDigits:d,minimumFractionDigits:v>=1000?0:Math.min(d,2)});
+}
+const fmtRate=x=>x.toLocaleString("ko-KR",{maximumFractionDigits:x>=100?1:x>=1?2:4});
+function hangulNum(n){
+  n=Math.floor(n);
+  if(n<1)return"";
+  const units=[["조",1e12],["억",1e8],["만",1e4]];const out=[];let r=n;
+  for(const[u,v]of units){const q=Math.floor(r/v);if(q){out.push(q.toLocaleString("ko-KR")+u);r%=v}}
+  if(r)out.push(r.toLocaleString("ko-KR"));
+  return out.join(" ");
+}
+const defaultAmt=c=>c.code==="KRW"?1000000:(c.unit>1?1000:100);
+
+function rateText(c){
+  if(base.code==="KRW")return`${c.unit} ${c.code} = ${c.rate.toLocaleString("ko-KR")}원`;
+  if(c.code==="KRW")return`${base.unit} ${base.code} = ${base.rate.toLocaleString("ko-KR")}원`;
+  return`${base.unit} ${base.code} = ${fmtRate(base.unit*base.per1/c.per1)} ${c.code}`;
+}
+function tileHTML(c,hero){
+  const on=favs.includes(c.code);
+  const star=hero?"":`<button class="star" aria-pressed="${on}" aria-label="${c.name} 즐겨찾기 ${on?"해제":"추가"}">${on?"★":"☆"}</button>`;
+  return`<div class="tile${hero?" hero":""}" data-code="${c.code}">${star}
+    <div class="face" role="button" tabindex="0" title="이 통화로 입력하기" aria-label="${c.name}으로 입력하기">
+      <div class="t-head"><span class="flag" aria-hidden="true">${c.flag}</span><span class="code">${c.code}</span><span class="name">${c.name}</span></div>
+      <div class="val"></div>
+      <div class="rate">${rateText(c)}</div>
+    </div></div>`;
+}
+function render(anim){
+  const pool=CUR.filter(c=>c.code!==base.code);
+  const f=pool.filter(c=>favs.includes(c.code)).sort((a,b)=>favs.indexOf(a.code)-favs.indexOf(b.code));
+  const rest=pool.filter(c=>!favs.includes(c.code));
+  $("#krBoard").innerHTML=base.code==="KRW"?"":tileHTML(KRW,true);
+  $("#favBoard").innerHTML=f.length?f.map(c=>tileHTML(c)).join(""):`<div class="empty">아직 즐겨찾기가 없어요. 아래 통화의 ☆를 눌러 추가해 보세요.</div>`;
+  $("#allBoard").innerHTML=rest.map(c=>tileHTML(c)).join("");
+  $("#count").textContent=`${pool.length}개 통화 · 타일을 누르면 그 통화로 입력해요`;
+  update(!!anim,!!anim);
+}
+let tmr=[];
+function update(animate=true,force=false){
+  const n=getAmount(), krw=n*base.per1;
+  const h=hangulNum(n);
+  $("#hangul").textContent=h?h+" "+(base.code==="KRW"?"원":base.name):"";
+  tmr.forEach(clearTimeout);tmr=[];
+  document.querySelectorAll(".tile").forEach((t,i)=>{
+    const c=ALL.find(x=>x.code===t.dataset.code);
+    const text=c.sym+" "+fmtVal(krw/c.per1,c.code);
+    const val=t.querySelector(".val");
+    if(!animate||(val.textContent===text&&!force)){val.textContent=text;return}
+    tmr.push(setTimeout(()=>{
+      t.classList.remove("flip");void t.offsetWidth;t.classList.add("flip");
+      setTimeout(()=>{val.textContent=text},210);
+    },Math.min(i*22,450)));
+  });
+}
+
+function buildChips(){
+  const steps=base.code==="KRW"
+    ?[[10000,"+1만"],[100000,"+10만"],[1000000,"+100만"],[10000000,"+1000만"]]
+    :[[10,"+10"],[100,"+100"],[1000,"+1,000"],[10000,"+1만"]];
+  chipsEl.innerHTML=steps.map(([v,l])=>`<button class="chip" data-add="${v}">${l}</button>`).join("")+`<button class="chip reset" data-reset>지우기</button>`;
+}
+chipsEl.addEventListener("click",e=>{
+  const b=e.target.closest(".chip");if(!b)return;
+  if(b.hasAttribute("data-reset")){amtEl.value="";update(true);amtEl.focus();return}
+  amtEl.value=fmtAmtStr(String(getAmount()+Number(b.dataset.add)));
+  update(true);
+});
+
+baseSel.innerHTML=ALL.map(c=>`<option value="${c.code}">${c.code} · ${c.name}</option>`).join("");
+function setBase(code,amt){
+  base=ALL.find(c=>c.code===code);
+  baseSel.value=code;
+  amtEl.value=amt!==undefined?amt:fmtAmtStr(amtEl.value);
+  buildChips();render(true);syncCalc();
+}
+baseSel.addEventListener("change",()=>{const c=ALL.find(x=>x.code===baseSel.value);setBase(c.code,defaultAmt(c).toLocaleString("ko-KR"))});
+
+// 입력: 숫자만 쓰면 바로 서식 적용, 글자가 섞이면 통화를 알아듣고 입력 통화를 바꿈
+let composing=false,parseT,updT;
+const hasText=s=>/[^\d.,\s]/.test(s);
+function resolveSmart(final){
+  clearTimeout(parseT);
+  const raw=amtEl.value;
+  if(!hasText(raw))return;
+  const code=detect(raw);
+  if(code&&code!==base.code){setBase(code);return}
+  if(code||final){amtEl.value=fmtAmtStr(raw);update(true)}
+}
+function onAmt(){
+  if(composing)return;
+  const raw=amtEl.value;
+  if(hasText(raw)){
+    clearTimeout(parseT);parseT=setTimeout(()=>resolveSmart(false),500);
+  }else{
+    amtEl.value=fmtAmtStr(raw);
+  }
+  clearTimeout(updT);updT=setTimeout(()=>update(true),220);
+}
+amtEl.addEventListener("input",onAmt);
+amtEl.addEventListener("compositionstart",()=>{composing=true});
+amtEl.addEventListener("compositionend",()=>{composing=false;onAmt()});
+amtEl.addEventListener("blur",()=>{resolveSmart(true);if(!hasText(amtEl.value))amtEl.value=fmtAmtStr(amtEl.value)});
+amtEl.addEventListener("focus",()=>amtEl.select());
+
+// 타일 누르기: 별은 즐겨찾기, 나머지는 그 통화로 입력
+document.addEventListener("click",e=>{
+  const s=e.target.closest(".star");
+  if(s){
+    const code=s.closest(".tile").dataset.code;
+    favs=favs.includes(code)?favs.filter(x=>x!==code):[...favs,code];
+    saveFavs();render(false);return;
+  }
+  const f=e.target.closest(".face");
+  if(f){const c=ALL.find(x=>x.code===f.closest(".tile").dataset.code);setBase(c.code,defaultAmt(c).toLocaleString("ko-KR"));amtEl.focus()}
+});
+document.addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("face")){e.preventDefault();e.target.click()}
+});
+
+// 계산기
+let mode="buy";
+const cCur=$("#cCur");
+cCur.innerHTML=CUR.map(c=>`<option value="${c.code}">${c.code} · ${c.name}</option>`).join("");
+const won=v=>Math.round(v).toLocaleString("ko-KR")+"원";
+function calc(){
+  const c=CUR.find(x=>x.code===cCur.value);
+  const fx=parseNum($("#cAmt").value), sp=parseNum($("#cSpread").value)/100, pr=Math.min(parseNum($("#cPref").value),100)/100;
+  const b=c.per1, sign=mode==="buy"?1:-1;
+  const noPref=b*(1+sign*sp), applied=b*(1+sign*sp*(1-pr));
+  const tot=applied*fx, totNo=noPref*fx;
+  const show=v=>(v*c.unit).toLocaleString("ko-KR",{maximumFractionDigits:2})+(c.unit>1?` / ${c.unit}`:"");
+  $("#rBase").textContent=show(b);
+  $("#rApplied").textContent=show(applied);
+  $("#rNoPref").textContent=won(totNo);
+  $("#rSave").textContent=won(Math.abs(totNo-tot));
+  $("#rTotal").textContent=won(tot);
+  $("#rTotalLabel").textContent=mode==="buy"?"내야 할 원화":"받을 원화";
+}
+function syncCalc(){if(base.code!=="KRW"){cCur.value=base.code}calc()}
+function setMode(m){mode=m;$("#modeBuy").setAttribute("aria-pressed",m==="buy");$("#modeSell").setAttribute("aria-pressed",m==="sell");
+  $("#cAmtLabel").textContent=m==="buy"?"필요한 외화 금액":"팔 외화 금액";calc()}
+$("#modeBuy").onclick=()=>setMode("buy");$("#modeSell").onclick=()=>setMode("sell");
+["#cCur","#cAmt","#cSpread","#cPref"].forEach(s=>$(s).addEventListener("input",calc));
+
+buildChips();render(false);calc();
+</script>
