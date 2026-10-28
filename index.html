@@ -101,7 +101,7 @@ footer{font-size:12px;color:var(--muted)}
 <div class="wrap">
   <header class="top">
     <h1>환율 <b>전광판</b></h1>
-    <div class="asof">기준 2026-10-23 <span>미리보기용 예시 환율</span></div>
+    <div class="asof"><b id="asofDate">환율 불러오는 중…</b> <span id="asofSrc"></span></div>
   </header>
 
   <section class="input-board" aria-label="금액 입력">
@@ -147,7 +147,7 @@ footer{font-size:12px;color:var(--muted)}
     </aside>
   </div>
 
-  <footer>표시된 환율은 화면 미리보기용 예시 값이에요. 실제 사이트에서는 매일 공개 환율 API로 자동 갱신합니다.</footer>
+  <footer>환율은 한국수출입은행 고시 환율(매매기준율)과 공개 환율 API를 바탕으로 하루 단위로 갱신돼요. 실제 환전·송금 환율은 금융기관마다 달라요.</footer>
 </div>
 
 <script>
@@ -357,4 +357,20 @@ $("#modeBuy").onclick=()=>setMode("buy");$("#modeSell").onclick=()=>setMode("sel
 ["#cCur","#cAmt","#cSpread","#cPref"].forEach(s=>$(s).addEventListener("input",calc));
 
 buildChips();render(false);calc();
+
+// 실제 환율 불러오기 (실패하면 위의 예시 값을 그대로 쓰고 안내 문구를 바꿈)
+(async()=>{
+  const dEl=$("#asofDate"),sEl=$("#asofSrc");
+  try{
+    const r=await fetch("/api/rates",{cache:"no-store"});
+    if(!r.ok)throw 0;
+    const j=await r.json();
+    if(!j||!j.rates)throw 0;
+    CUR.forEach(c=>{const v=j.rates[c.code];if(v>0){c.per1=v;c.rate=v*c.unit}});
+    dEl.textContent="기준 "+j.asOf;sEl.textContent=j.source;
+    render(false);calc();
+  }catch(e){
+    dEl.textContent="환율을 불러오지 못했어요";sEl.textContent="예시 값 표시 중";
+  }
+})();
 </script>
