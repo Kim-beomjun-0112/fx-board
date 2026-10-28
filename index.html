@@ -7,6 +7,8 @@
 <link rel="canonical" href="https://fx.qjawnsl112.com/">
 <link rel="alternate" hreflang="ko" href="https://fx.qjawnsl112.com/">
 <link rel="alternate" hreflang="en" href="https://fx.qjawnsl112.com/en/">
+<link rel="alternate" hreflang="ja" href="https://fx.qjawnsl112.com/ja/">
+<link rel="alternate" hreflang="zh-CN" href="https://fx.qjawnsl112.com/zh/">
 <link rel="alternate" hreflang="x-default" href="https://fx.qjawnsl112.com/">
 <meta name="theme-color" content="#1d2430">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -54,6 +56,7 @@ h1 b{color:var(--accent);font-weight:400}
 
 .lang{display:inline-block;margin-left:8px;padding:2px 10px;border:1px solid var(--accent);border-radius:999px;color:var(--accent);text-decoration:none;font-weight:700;font-size:12px}
 .lang:hover{background:var(--accent);color:var(--accent-ink)}
+.lang.cur{background:var(--accent);color:var(--accent-ink)}
 
 /* 입력판 */
 .input-board{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
@@ -130,7 +133,7 @@ footer{font-size:12px;color:var(--muted)}
 <div class="wrap">
   <header class="top">
     <h1>환율 <b>전광판</b></h1>
-    <div class="asof"><b id="asofDate">환율 불러오는 중…</b> <span id="asofSrc"></span><a class="lang" href="/en/" hreflang="en" lang="en">English</a></div>
+    <div class="asof"><b id="asofDate">환율 불러오는 중…</b> <span id="asofSrc"></span><span class="lang cur" aria-current="page">한국어</span><a class="lang" href="/en/" hreflang="en" lang="en">English</a><a class="lang" href="/ja/" hreflang="ja" lang="ja">日本語</a><a class="lang" href="/zh/" hreflang="zh-CN" lang="zh-CN">中文</a></div>
   </header>
 
   <section class="input-board" aria-label="금액 입력">
